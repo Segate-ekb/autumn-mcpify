@@ -1,0 +1,5 @@
+# Сборки пакета
+*.ospx
+
+# OneScript локальные зависимости
+oscript_modules/

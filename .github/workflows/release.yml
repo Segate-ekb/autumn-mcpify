@@ -1,0 +1,58 @@
+name: Публикация релиза
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+env:
+  PACKAGE_MASK: "autumn-mcpify-*.ospx"
+
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Актуализация
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Вычисление версии OneScript
+        shell: bash
+        id: oscript
+        run: |
+          set -ex
+          extracted_version=$(cat packagedef | grep ".ВерсияСреды(" | sed 's|[^"]*"||' | sed -r 's/".+//' || true)
+          echo "version=${extracted_version:-stable}" >> $GITHUB_OUTPUT
+
+      - name: Установка OneScript
+        uses: otymko/setup-onescript@v1.4
+        with:
+          version: ${{ steps.oscript.outputs.version }}
+
+      - name: Установка зависимостей тестов
+        run: |
+          opm install opm
+          opm install 1testrunner asserts 1commands
+
+      - name: Запуск тестов перед публикацией
+        run: |
+          mkdir -p build
+          1testrunner -runall tests
+
+      - name: Сборка пакета
+        run: opm build .
+
+      - name: Заливка артефакта в релиз
+        uses: actions/upload-artifact@v4
+        with:
+          name: autumn-mcpify-package
+          path: ./${{ env.PACKAGE_MASK }}
+
+      - name: Публикация в hub.oscript.io
+        shell: bash
+        env:
+          GITHUB_OAUTH_TOKEN: ${{ secrets.OSHUB_TOKEN }}
+          OPM_HUB_CHANNEL: stable
+        run: opm push ${{ env.PACKAGE_MASK }}

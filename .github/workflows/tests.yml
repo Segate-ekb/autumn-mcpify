@@ -1,0 +1,63 @@
+name: Тесты
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  checks: write
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-22.04', 'windows-latest']
+    steps:
+      - name: Актуализация
+        uses: actions/checkout@v4
+
+      - name: Вычисление версии OneScript
+        shell: bash
+        id: oscript
+        run: |
+          set -ex
+          extracted_version=$(cat packagedef | grep ".ВерсияСреды(" | sed 's|[^"]*"||' | sed -r 's/".+//' || true)
+          echo "version=${extracted_version:-stable}" >> $GITHUB_OUTPUT
+
+      - name: Установка OneScript
+        uses: otymko/setup-onescript@v1.4
+        with:
+          version: ${{ steps.oscript.outputs.version }}
+
+      - name: Установка зависимостей тестов
+        # Тесты компилируют только MCP_КэшОпций и MCP_Конфигурация — им нужны
+        # 1commands (Команда), asserts (Ожидаем) и сам тест-раннер. Остальные
+        # рантайм-зависимости пакета для этих юнит-тестов не требуются.
+        run: |
+          opm install opm
+          opm install 1testrunner asserts 1commands
+
+      - name: Подготовка каталога отчётов
+        shell: bash
+        run: mkdir -p build
+
+      - name: Запуск тестов
+        run: 1testrunner -runall tests xddReportPath build
+
+      - name: Публикация отчёта тестов
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          report_paths: 'build/*.xml'
+          fail_on_failure: true
+          require_passed_tests: true
+          detailed_summary: true
+          check_name: 'Тесты. ОС: ${{ matrix.os }}. OneScript: ${{ steps.oscript.outputs.version }}'

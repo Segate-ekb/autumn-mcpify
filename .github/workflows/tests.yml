@@ -39,24 +39,24 @@ jobs:
 
       - name: Установка зависимостей тестов
         # Тесты компилируют только MCP_КэшОпций и MCP_Конфигурация — им нужны
-        # 1commands (Команда), asserts (Ожидаем) и сам тест-раннер. Остальные
+        # 1commands (Команда), asserts (Ожидаем) и тест-раннер oneunit. Остальные
         # рантайм-зависимости пакета для этих юнит-тестов не требуются.
         run: |
           opm install opm
-          opm install 1testrunner asserts 1commands
+          opm install oneunit asserts 1commands
 
       - name: Подготовка каталога отчётов
         shell: bash
-        run: mkdir -p build
+        run: mkdir -p build/reports
 
       - name: Запуск тестов
-        run: 1testrunner -runall tests xddReportPath build
+        run: oneunit execute -d tests -r --junit build/reports/junit.xml
 
       - name: Публикация отчёта тестов
         if: always()
         uses: mikepenz/action-junit-report@v6
         with:
-          report_paths: 'build/*.xml'
+          report_paths: 'build/reports/junit.xml'
           fail_on_failure: true
           require_passed_tests: true
           detailed_summary: true

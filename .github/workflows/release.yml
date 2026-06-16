@@ -34,12 +34,10 @@ jobs:
       - name: Установка зависимостей тестов
         run: |
           opm install opm
-          opm install 1testrunner asserts 1commands
+          opm install oneunit asserts 1commands
 
       - name: Запуск тестов перед публикацией
-        run: |
-          mkdir -p build
-          1testrunner -runall tests
+        run: oneunit execute -d tests -r
 
       - name: Сборка пакета
         run: opm build .

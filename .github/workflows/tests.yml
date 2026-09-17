@@ -15,5 +15,9 @@ jobs:
     uses: autumn-library/workflows/.github/workflows/test.yml@main
     with:
       test_engine: oneunit
+      # Установка с --dev приносит autumn-logos 1.2.0 (configor -> winow), поверх которого opm
+      # копирует 1.3.3 из бандла oneunit без очистки каталога: остаётся package-loader.os от 1.2.0
+      # с модулем Осень, удалённым в autumn 5. Прямая установка с хаба каталог очищает.
+      additional_oscript_packages: autumn-logos@1.3.3
       test_dir_paths: tests
       test_recursive: true
